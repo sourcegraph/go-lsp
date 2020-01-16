@@ -2,6 +2,8 @@ package lsp
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"strings"
 )
@@ -15,6 +17,7 @@ type InitializeParams struct {
 	RootPath string `json:"rootPath,omitempty"`
 
 	RootURI               DocumentURI        `json:"rootUri,omitempty"`
+	Trace                 Trace              `json:"trace,omitempty"`
 	InitializationOptions interface{}        `json:"initializationOptions,omitempty"`
 	Capabilities          ClientCapabilities `json:"capabilities"`
 }
@@ -31,6 +34,8 @@ func (p *InitializeParams) Root() DocumentURI {
 }
 
 type DocumentURI string
+
+type Trace string
 
 type ClientCapabilities struct {
 	Workspace    WorkspaceClientCapabilities    `json:"workspace,omitempty"`
@@ -53,7 +58,12 @@ type ClientCapabilities struct {
 	XCacheProvider bool `json:"xcacheProvider,omitempty"`
 }
 
-type WorkspaceClientCapabilities struct{}
+type WorkspaceClientCapabilities struct {
+	WorkspaceEdit struct {
+		DocumentChanges    bool     `json:"documentChanges,omitempty"`
+		ResourceOperations []string `json:"resourceOperations,omitempty"`
+	} `json:"workspaceEdit,omitempty"`
+}
 
 type TextDocumentClientCapabilities struct {
 	Completion struct {
@@ -61,13 +71,30 @@ type TextDocumentClientCapabilities struct {
 			ValueSet []CompletionItemKind `json:"valueSet,omitempty"`
 		} `json:"completionItemKind,omitempty"`
 		CompletionItem struct {
-			SnippetSupport bool `json:"snippetSupport,omitempty"`
+			DocumentationFormat []DocumentationFormat `json:"documentationFormat,omitempty"`
+			SnippetSupport      bool                  `json:"snippetSupport,omitempty"`
 		} `json:"completionItem,omitempty"`
 	} `json:"completion,omitempty"`
 
 	Implementation *struct {
 		DynamicRegistration bool `json:"dynamicRegistration,omitempty"`
 	} `json:"implementation,omitempty"`
+
+	CodeAction struct {
+		CodeActionLiteralSupport struct {
+			CodeActionKind struct {
+				ValueSet []CodeActionKind `json:"valueSet,omitempty"`
+			} `json:"codeActionKind,omitempty"`
+		} `json:"codeActionLiteralSupport,omitempty"`
+	} `json:"codeAction,omitempty"`
+
+	ColorProvider *struct {
+		DynamicRegistration bool `json:"dynamicRegistration,omitempty"`
+	} `json:"colorProvider,omitempty"`
+
+	SemanticHighlightingCapabilities *struct {
+		SemanticHighlighting bool `json:"semanticHighlighting,omitempty"`
+	} `json:"semanticHighlightingCapabilities,omitempty"`
 }
 
 type InitializeResult struct {
@@ -77,6 +104,14 @@ type InitializeResult struct {
 type InitializeError struct {
 	Retry bool `json:"retry"`
 }
+
+type ResourceOperation string
+
+const (
+	ROCreate ResourceOperation = "create"
+	RODelete ResourceOperation = "delete"
+	RORename ResourceOperation = "rename"
+)
 
 // TextDocumentSyncKind is a DEPRECATED way to describe how text
 // document syncing works. Use TextDocumentSyncOptions instead (or the
@@ -167,6 +202,7 @@ type ServerCapabilities struct {
 	DocumentOnTypeFormattingProvider *DocumentOnTypeFormattingOptions `json:"documentOnTypeFormattingProvider,omitempty"`
 	RenameProvider                   bool                             `json:"renameProvider,omitempty"`
 	ExecuteCommandProvider           *ExecuteCommandOptions           `json:"executeCommandProvider,omitempty"`
+	SemanticHighlighting             *SemanticHighlightingOptions     `json:"semanticHighlighting,omitempty"`
 
 	// XWorkspaceReferencesProvider indicates the server provides support for
 	// xworkspace/references. This is a Sourcegraph extension.
@@ -209,6 +245,10 @@ type ExecuteCommandOptions struct {
 type ExecuteCommandParams struct {
 	Command   string        `json:"command"`
 	Arguments []interface{} `json:"arguments,omitempty"`
+}
+
+type SemanticHighlightingOptions struct {
+	Scopes [][]string `json:"scopes,omitempty"`
 }
 
 type CompletionItemKind int
@@ -297,6 +337,25 @@ type CompletionTriggerKind int
 const (
 	CTKInvoked          CompletionTriggerKind = 1
 	CTKTriggerCharacter                       = 2
+)
+
+type DocumentationFormat string
+
+const (
+	DFPlainText DocumentationFormat = "plaintext"
+)
+
+type CodeActionKind string
+
+const (
+	CAKEmpty                 CodeActionKind = ""
+	CAKQuickFix              CodeActionKind = "quickfix"
+	CAKRefactor              CodeActionKind = "refactor"
+	CAKRefactorExtract       CodeActionKind = "refactor.extract"
+	CAKRefactorInline        CodeActionKind = "refactor.inline"
+	CAKRefactorRewrite       CodeActionKind = "refactor.rewrite"
+	CAKSource                CodeActionKind = "source"
+	CAKSourceOrganizeImports CodeActionKind = "source.organizeImports"
 )
 
 type InsertTextFormat int
@@ -635,4 +694,114 @@ type DocumentOnTypeFormattingParams struct {
 
 type CancelParams struct {
 	ID ID `json:"id"`
+}
+
+type SemanticHighlightingParams struct {
+	TextDocument VersionedTextDocumentIdentifier   `json:"textDocument"`
+	Lines        []SemanticHighlightingInformation `json:"lines"`
+}
+
+// SemanticHighlightingInformation represents a semantic highlighting
+// information that has to be applied on a specific line of the text
+// document.
+type SemanticHighlightingInformation struct {
+	// Line is the zero-based line position in the text document.
+	Line int `json:"line"`
+
+	// Tokens is a base64 encoded string representing every single highlighted
+	// characters with its start position, length and the "lookup table" index of
+	// the semantic highlighting [TextMate scopes](https://manual.macromates.com/en/language_grammars).
+	// If the `tokens` is empty or not defined, then no highlighted positions are
+	// available for the line.
+	Tokens SemanticHighlightingTokens `json:"tokens,omitempty"`
+}
+
+type semanticHighlightingInformation struct {
+	Line   int     `json:"line"`
+	Tokens *string `json:"tokens"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (v *SemanticHighlightingInformation) MarshalJSON() ([]byte, error) {
+	tokens := string(v.Tokens.Serialize())
+	return json.Marshal(&semanticHighlightingInformation{
+		Line:   v.Line,
+		Tokens: &tokens,
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (v *SemanticHighlightingInformation) UnmarshalJSON(data []byte) error {
+	var info semanticHighlightingInformation
+	err := json.Unmarshal(data, &info)
+	if err != nil {
+		return err
+	}
+
+	if info.Tokens != nil {
+		v.Tokens, err = DeserializeSemanticHighlightingTokens([]byte(*info.Tokens))
+		if err != nil {
+			return err
+		}
+	}
+
+	v.Line = info.Line
+	return nil
+}
+
+type SemanticHighlightingTokens []SemanticHighlightingToken
+
+func (v SemanticHighlightingTokens) Serialize() []byte {
+	var chunks [][]byte
+
+	// Writes each token to `tokens` in the byte format specified by the LSP
+	// proposal. Described below:
+	// |<---- 4 bytes ---->|<-- 2 bytes -->|<--- 2 bytes -->|
+	// |    character      |  length       |    index       |
+	for _, token := range v {
+		chunk := make([]byte, 8)
+		binary.BigEndian.PutUint32(chunk[:4], token.Character)
+		binary.BigEndian.PutUint16(chunk[4:6], token.Length)
+		binary.BigEndian.PutUint16(chunk[6:], token.Scope)
+		chunks = append(chunks, chunk)
+	}
+
+	src := make([]byte, len(chunks)*8)
+	for i, chunk := range chunks {
+		copy(src[i*8:i*8+8], chunk)
+	}
+
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+	base64.StdEncoding.Encode(dst, src)
+	return dst
+}
+
+func DeserializeSemanticHighlightingTokens(src []byte) (SemanticHighlightingTokens, error) {
+	dst := make([]byte, base64.StdEncoding.DecodedLen(len(src)))
+	n, err := base64.StdEncoding.Decode(dst, src)
+	if err != nil {
+		return nil, err
+	}
+
+	var chunks [][]byte
+	for i := 7; i < len(dst[:n]); i += 8 {
+		chunks = append(chunks, dst[i-7:i+1])
+	}
+
+	var tokens SemanticHighlightingTokens
+	for _, chunk := range chunks {
+		tokens = append(tokens, SemanticHighlightingToken{
+			Character: binary.BigEndian.Uint32(chunk[:4]),
+			Length:    binary.BigEndian.Uint16(chunk[4:6]),
+			Scope:     binary.BigEndian.Uint16(chunk[6:]),
+		})
+	}
+
+	return tokens, nil
+}
+
+type SemanticHighlightingToken struct {
+	Character uint32
+	Length    uint16
+	Scope     uint16
 }

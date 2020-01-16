@@ -135,3 +135,61 @@ func TestHover(t *testing.T) {
 		}
 	}
 }
+
+func TestSemanticHighlightingTokens(t *testing.T) {
+	tests := []struct {
+		data SemanticHighlightingTokens
+		want string
+	}{{
+		data: nil,
+		want: `{"line":0,"tokens":""}`,
+	}, {
+		data: SemanticHighlightingTokens{
+			{
+				Character: 1,
+				Length:    2,
+				Scope:     3,
+			},
+		},
+		want: `{"line":0,"tokens":"AAAAAQACAAM="}`,
+	}, {
+		// Double check correctness by adapting test from:
+		// https://github.com/gluon-lang/lsp-types/blob/647f7013625c3cd45c1d3fe53a2e3656d091c36a/src/lib.rs#L4057
+		data: SemanticHighlightingTokens{
+			{
+				Character: 0x00000001,
+				Length:    0x0002,
+				Scope:     0x0003,
+			},
+			{
+				Character: 0x00112222,
+				Length:    0x0FF0,
+				Scope:     0x0202,
+			},
+		},
+		want: `{"line":0,"tokens":"AAAAAQACAAMAESIiD/ACAg=="}`,
+	}}
+
+	for _, test := range tests {
+		info := SemanticHighlightingInformation{
+			Tokens: test.data,
+		}
+		marshaled, err := json.Marshal(&info)
+		if err != nil {
+			t.Errorf("json.Marshal error: %s", err)
+			continue
+		}
+		if string(marshaled) != test.want {
+			t.Errorf("Marshaled result expected %s, but got %s", test.want, string(marshaled))
+			continue
+		}
+		var s SemanticHighlightingInformation
+		if err := json.Unmarshal(marshaled, &s); err != nil {
+			t.Errorf("json.Unmarshal error: %s", err)
+			continue
+		}
+		if !reflect.DeepEqual(test.data, s.Tokens) {
+			t.Errorf("Expected %+v, but got %+v", test.want, s)
+		}
+	}
+}
