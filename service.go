@@ -315,6 +315,7 @@ type ServerCapabilities struct {
 	RenameProvider                   bool                             `json:"renameProvider,omitempty"`
 	ExecuteCommandProvider           *ExecuteCommandOptions           `json:"executeCommandProvider,omitempty"`
 	SemanticHighlighting             *SemanticHighlightingOptions     `json:"semanticHighlighting,omitempty"`
+	SemanticTokensProvider           *SemanticTokensOptions           `json:"semanticTokensProvider,omitempty"`
 
 	// XWorkspaceReferencesProvider indicates the server provides support for
 	// xworkspace/references. This is a Sourcegraph extension.
@@ -361,6 +362,70 @@ type ExecuteCommandParams struct {
 
 type SemanticHighlightingOptions struct {
 	Scopes [][]string `json:"scopes,omitempty"`
+}
+
+type SemanticTokensProviderFull string
+
+const (
+	STPFNone      SemanticTokensProviderFull = ""
+	STPFFull      SemanticTokensProviderFull = "full"
+	STPFFullDelta SemanticTokensProviderFull = "full-delta"
+)
+
+type semanticTokensProviderFull struct {
+	Delta bool `json:"delta,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler.
+func (o SemanticTokensProviderFull) MarshalJSON() ([]byte, error) {
+	if o == STPFNone {
+		return json.Marshal(false)
+	}
+	if o == STPFFull {
+		return json.Marshal(true)
+	}
+	return json.Marshal(semanticTokensProviderFull{
+		Delta: o == STPFFullDelta,
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (o *SemanticTokensProviderFull) UnmarshalJSON(data []byte) error {
+	// Support both bool and semanticTokensProviderFull
+	var v bool
+	if err := json.Unmarshal(data, &v); err == nil {
+		if v {
+			f := STPFFull
+			o = &f
+			return nil
+		}
+		f := STPFNone
+		o = &f
+		return nil
+	}
+
+	var v2 semanticTokensProviderFull
+	if err := json.Unmarshal(data, &v2); err != nil {
+		return err
+	}
+	f := STPFFull
+	if v2.Delta {
+		f = STPFFullDelta
+	}
+	o = &f
+	return nil
+}
+
+type SemanticTokensLegend interface{}
+type SemanticTokensOptions struct {
+	Legend           SemanticTokensLegend       `json:"legend"`
+	Range            bool                       `json:"range,omitempty"`
+	Full             SemanticTokensProviderFull `json:"full,omitempty"`
+	WorkDoneProgress bool                       `json:"workDoneProgress,omitempty"`
+
+	// from SemanticTokensRegistrationOptions
+	DocumentSelector DocumentSelector `json:"document_selector,omitempty"`
+	ID               ID               `json:"id,omitempty"`
 }
 
 type CompletionItemKind int
