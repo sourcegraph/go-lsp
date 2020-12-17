@@ -416,7 +416,11 @@ func (o *SemanticTokensProviderFull) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type SemanticTokensLegend interface{}
+type SemanticTokensLegend struct {
+	TokenTypes     []string `json:"tokenTypes"`
+	TokenModifiers []string `json:"tokenModifiers"`
+}
+
 type SemanticTokensOptions struct {
 	Legend           SemanticTokensLegend       `json:"legend"`
 	Range            bool                       `json:"range,omitempty"`
