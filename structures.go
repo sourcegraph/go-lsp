@@ -57,6 +57,13 @@ type Diagnostic struct {
 	Code string `json:"code,omitempty"`
 
 	/**
+	 * CodeDescription is a optional property to describe the error code.
+	 *
+	 * @since 3.16.0
+	 */
+	CodeDescription *CodeDescription `json:"codeDescription,omitempty"`
+
+	/**
 	 * A human-readable string describing the source of this
 	 * diagnostic, e.g. 'typescript' or 'super lint'.
 	 */
@@ -66,6 +73,19 @@ type Diagnostic struct {
 	 * The diagnostic's message.
 	 */
 	Message string `json:"message"`
+
+	/**
+	 * Tags is additional metadata about the diagnostic.
+	 *
+	 * @since 3.15.0
+	 */
+	Tags []DiagnosticTag `json:"tags,omitempty"`
+
+	/**
+	 * An array of related diagnostic information, e.g. when symbol-names within
+	 * a scope collide all definitions can be marked via this property.
+	 */
+	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation,omitempty"`
 }
 
 type DiagnosticSeverity int
@@ -76,6 +96,31 @@ const (
 	Information                    = 3
 	Hint                           = 4
 )
+
+type CodeDescription struct {
+	/**
+	 * Href is a URI to open with more information about the diagnostic error.
+	 */
+	Href string `json:"href"`
+}
+
+type DiagnosticTag int
+
+const (
+	Unnecessary DiagnosticTag = 1
+	Deprecated  DiagnosticTag = 2
+)
+
+type DiagnosticRelatedInformation struct {
+	/**
+	 * The location of this related diagnostic information.
+	 */
+	Location Location `json:"location"`
+	/**
+	 * The message of this related diagnostic information.
+	 */
+	Message string `json:"message"`
+}
 
 type Command struct {
 	/**
