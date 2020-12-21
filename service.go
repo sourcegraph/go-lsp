@@ -448,7 +448,7 @@ type CompletionTriggerKind int
 
 const (
 	CTKInvoked          CompletionTriggerKind = 1
-	CTKTriggerCharacter                       = 2
+	CTKTriggerCharacter CompletionTriggerKind = 2
 )
 
 type DocumentationFormat string
@@ -474,7 +474,7 @@ type InsertTextFormat int
 
 const (
 	ITFPlainText InsertTextFormat = 1
-	ITFSnippet                    = 2
+	ITFSnippet   InsertTextFormat = 2
 )
 
 type CompletionContext struct {
@@ -575,8 +575,8 @@ type DocumentHighlightKind int
 
 const (
 	Text  DocumentHighlightKind = 1
-	Read                        = 2
-	Write                       = 3
+	Read  DocumentHighlightKind = 2
+	Write DocumentHighlightKind = 3
 )
 
 type DocumentHighlight struct {
@@ -740,9 +740,9 @@ type MessageType int
 
 const (
 	MTError   MessageType = 1
-	MTWarning             = 2
-	Info                  = 3
-	Log                   = 4
+	MTWarning MessageType = 2
+	Info      MessageType = 3
+	Log       MessageType = 4
 )
 
 type ShowMessageParams struct {
@@ -773,8 +773,8 @@ type FileChangeType int
 
 const (
 	Created FileChangeType = 1
-	Changed                = 2
-	Deleted                = 3
+	Changed FileChangeType = 2
+	Deleted FileChangeType = 3
 )
 
 type FileEvent struct {
