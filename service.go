@@ -432,6 +432,18 @@ type SemanticTokensOptions struct {
 	ID               ID               `json:"id,omitempty"`
 }
 
+type SemanticTokensParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+
+	WorkDoneToken      string `json:"workDoneToken,omitempty"`
+	PartialResultToken string `json:"partialResultToken,omitempty"`
+}
+
+type SemanticTokens struct {
+	ResultID string `json:"resultId,omitempty"`
+	Data     []uint `json:"data"`
+}
+
 type CompletionItemKind int
 
 const (
