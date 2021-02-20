@@ -668,11 +668,27 @@ var symbolKindName = map[SymbolKind]string{
 	SKTypeParameter: "TypeParameter",
 }
 
+type SymbolTag int
+
+const (
+	SYTDeprecated SymbolTag = 1
+)
+
 type SymbolInformation struct {
 	Name          string     `json:"name"`
 	Kind          SymbolKind `json:"kind"`
 	Location      Location   `json:"location"`
 	ContainerName string     `json:"containerName,omitempty"`
+}
+
+type DocumentSymbol struct {
+	Name           string           `json:"name"`
+	Detail         string           `json:"detail,omitempty"` // Usually the signature of the function
+	Kind           SymbolKind       `json:"kind"`
+	Tags           []SymbolTag      `json:"tags,omitempty"`
+	Range          Range            `json:"range"`
+	SelectionRange Range            `json:"selectionRange"`
+	Children       []DocumentSymbol `json:"children,omitempty"` // For example fields in a class
 }
 
 type WorkspaceSymbolParams struct {
