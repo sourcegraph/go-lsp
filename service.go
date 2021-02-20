@@ -300,13 +300,14 @@ type ServerCapabilities struct {
 	HoverProvider                    bool                             `json:"hoverProvider,omitempty"`
 	CompletionProvider               *CompletionOptions               `json:"completionProvider,omitempty"`
 	SignatureHelpProvider            *SignatureHelpOptions            `json:"signatureHelpProvider,omitempty"`
+	DeclarationProvider              *DeclarationOptions              `json:"declarationProvider,omitempty"`
 	DefinitionProvider               bool                             `json:"definitionProvider,omitempty"`
 	TypeDefinitionProvider           bool                             `json:"typeDefinitionProvider,omitempty"`
 	ReferencesProvider               bool                             `json:"referencesProvider,omitempty"`
 	DocumentHighlightProvider        bool                             `json:"documentHighlightProvider,omitempty"`
 	DocumentSymbolProvider           bool                             `json:"documentSymbolProvider,omitempty"`
 	WorkspaceSymbolProvider          bool                             `json:"workspaceSymbolProvider,omitempty"`
-	ImplementationProvider           bool                             `json:"implementationProvider,omitempty"`
+	ImplementationProvider           *ImplementationOptions           `json:"implementationProvider,omitempty"`
 	CodeActionProvider               bool                             `json:"codeActionProvider,omitempty"`
 	CodeLensProvider                 *CodeLensOptions                 `json:"codeLensProvider,omitempty"`
 	DocumentFormattingProvider       bool                             `json:"documentFormattingProvider,omitempty"`
@@ -315,6 +316,7 @@ type ServerCapabilities struct {
 	RenameProvider                   bool                             `json:"renameProvider,omitempty"`
 	ExecuteCommandProvider           *ExecuteCommandOptions           `json:"executeCommandProvider,omitempty"`
 	SemanticHighlighting             *SemanticHighlightingOptions     `json:"semanticHighlighting,omitempty"`
+	//SemanticTokensProvider           *SemanticTokensOptions           `json:"semanticTokensProvider,omitempty"`
 
 	// XWorkspaceReferencesProvider indicates the server provides support for
 	// xworkspace/references. This is a Sourcegraph extension.
@@ -361,6 +363,12 @@ type ExecuteCommandParams struct {
 
 type SemanticHighlightingOptions struct {
 	Scopes [][]string `json:"scopes,omitempty"`
+}
+
+type DeclarationOptions struct {
+}
+
+type ImplementationOptions struct {
 }
 
 type CompletionItemKind int
@@ -488,20 +496,27 @@ type CompletionParams struct {
 }
 
 type Hover struct {
-	Contents []MarkedString `json:"contents"`
-	Range    *Range         `json:"range,omitempty"`
+	Contents MarkupContent `json:"contents"`
+	Range    *Range        `json:"range,omitempty"`
 }
 
 type hover Hover
 
 func (h Hover) MarshalJSON() ([]byte, error) {
-	if h.Contents == nil {
-		return json.Marshal(hover{
-			Contents: []MarkedString{},
-			Range:    h.Range,
-		})
-	}
 	return json.Marshal(hover(h))
+}
+
+type MarkupKind string
+
+const (
+	MUKPlainText = "plaintext"
+	MUKMarkdown  = "markdown"
+)
+
+type MarkupContent markupContent
+type markupContent struct {
+	Kind  MarkupKind `json:"kind"`
+	Value string     `json:"value"`
 }
 
 type MarkedString markedString

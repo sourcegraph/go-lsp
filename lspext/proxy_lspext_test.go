@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sourcegraph/go-lsp"
+	"github.com/piot/go-lsp"
 )
 
 func TestWalkURIFields(t *testing.T) {

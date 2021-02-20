@@ -1,6 +1,6 @@
 package lspext
 
-import "github.com/sourcegraph/go-lsp"
+import "github.com/piot/go-lsp"
 
 // See https://github.com/sourcegraph/language-server-protocol/pull/4.
 
