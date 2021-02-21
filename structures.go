@@ -39,6 +39,35 @@ type Location struct {
 	Range Range       `json:"range"`
 }
 
+type CodeDescription struct {
+	href URI `json:"href"`
+}
+
+type LogTraceParams struct {
+	Message string `json:"message"`
+
+	Verbose bool `json:"verbose"`
+}
+
+type DiagnosticRelatedInformation struct {
+	/**
+	 * The location of this related diagnostic information.
+	 */
+	Location Location `json:"location"`
+
+	/**
+	 * The message of this related diagnostic information.
+	 */
+	Message string `json:"message"`
+}
+
+type DiagnosticTag int
+
+const (
+	DITAUnnecessary DiagnosticTag = 1
+	DITADeprecated  DiagnosticTag = 2
+)
+
 type Diagnostic struct {
 	/**
 	 * The range at which the message applies.
@@ -57,6 +86,10 @@ type Diagnostic struct {
 	Code string `json:"code,omitempty"`
 
 	/**
+	 * Describing the code. Can be omitted.
+	 */
+	CodeDescription *CodeDescription `json:"codeDescription,omitempty"`
+	/**
 	 * A human-readable string describing the source of this
 	 * diagnostic, e.g. 'typescript' or 'super lint'.
 	 */
@@ -66,6 +99,12 @@ type Diagnostic struct {
 	 * The diagnostic's message.
 	 */
 	Message string `json:"message"`
+
+	Tags []DiagnosticTag `json:"tags,omitempty"`
+
+	RelatedInformation []DiagnosticRelatedInformation `json:"relatedInformation,omitempty"`
+
+	Data interface{} `json:"data,omitempty"`
 }
 
 type DiagnosticSeverity int

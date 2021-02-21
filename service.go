@@ -2,8 +2,6 @@ package lsp
 
 import (
 	"bytes"
-	"encoding/base64"
-	"encoding/binary"
 	"encoding/json"
 	"strings"
 )
@@ -37,6 +35,7 @@ func (p *InitializeParams) Root() DocumentURI {
 }
 
 type DocumentURI string
+type URI string
 
 type ClientInfo struct {
 	Name    string `json:"name,omitempty"`
@@ -297,26 +296,33 @@ type SaveOptions struct {
 
 type ServerCapabilities struct {
 	TextDocumentSync                 *TextDocumentSyncOptionsOrKind   `json:"textDocumentSync,omitempty"`
-	HoverProvider                    bool                             `json:"hoverProvider,omitempty"`
 	CompletionProvider               *CompletionOptions               `json:"completionProvider,omitempty"`
+	HoverProvider                    bool                             `json:"hoverProvider,omitempty"`
 	SignatureHelpProvider            *SignatureHelpOptions            `json:"signatureHelpProvider,omitempty"`
 	DeclarationProvider              *DeclarationOptions              `json:"declarationProvider,omitempty"`
 	DefinitionProvider               bool                             `json:"definitionProvider,omitempty"`
 	TypeDefinitionProvider           bool                             `json:"typeDefinitionProvider,omitempty"`
+	ImplementationProvider           *ImplementationOptions           `json:"implementationProvider,omitempty"`
 	ReferencesProvider               bool                             `json:"referencesProvider,omitempty"`
 	DocumentHighlightProvider        bool                             `json:"documentHighlightProvider,omitempty"`
 	DocumentSymbolProvider           bool                             `json:"documentSymbolProvider,omitempty"`
-	WorkspaceSymbolProvider          bool                             `json:"workspaceSymbolProvider,omitempty"`
-	ImplementationProvider           *ImplementationOptions           `json:"implementationProvider,omitempty"`
 	CodeActionProvider               bool                             `json:"codeActionProvider,omitempty"`
 	CodeLensProvider                 *CodeLensOptions                 `json:"codeLensProvider,omitempty"`
+	DocumentLinkProvider             *DocumentLinkOptions             `json:"documentLinkProvider,omitempty"`
+	ColorProvider                    *DocumentColorOptions            `json:"colorProvider,omitempty"`
 	DocumentFormattingProvider       bool                             `json:"documentFormattingProvider,omitempty"`
 	DocumentRangeFormattingProvider  bool                             `json:"documentRangeFormattingProvider,omitempty"`
 	DocumentOnTypeFormattingProvider *DocumentOnTypeFormattingOptions `json:"documentOnTypeFormattingProvider,omitempty"`
 	RenameProvider                   bool                             `json:"renameProvider,omitempty"`
+	FoldingRangeProvider             *FoldingRangeOptions             `json:"foldingRangeProvider,omitempty"`
 	ExecuteCommandProvider           *ExecuteCommandOptions           `json:"executeCommandProvider,omitempty"`
-	SemanticHighlighting             *SemanticHighlightingOptions     `json:"semanticHighlighting,omitempty"`
-	//SemanticTokensProvider           *SemanticTokensOptions           `json:"semanticTokensProvider,omitempty"`
+	SelectionRangeProvider           *SelectionRangeOptions           `json:"selectionRangeProvider,omitempty"`
+	LinkedEditingRangeProvider       *LinkedEditingRangeOptions       `json:"linkedEditingRangeProvider,omitempty"`
+	CallHierarchyProvider            *CallHierarchyOptions            `json:"callHierarchyProvider,omitempty"`
+	SemanticTokensProvider           *SemanticTokensOptions           `json:"semanticTokensProvider,omitempty"`
+	MonikerProvider                  *MonikerOptions                  `json:"monikerProvider,omitempty"`
+	WorkspaceSymbolProvider          bool                             `json:"workspaceSymbolProvider,omitempty"`
+	Workspace                        *WorkspaceOptions                `json:"workspace,omitempty"`
 
 	// XWorkspaceReferencesProvider indicates the server provides support for
 	// xworkspace/references. This is a Sourcegraph extension.
@@ -359,10 +365,6 @@ type ExecuteCommandOptions struct {
 type ExecuteCommandParams struct {
 	Command   string        `json:"command"`
 	Arguments []interface{} `json:"arguments,omitempty"`
-}
-
-type SemanticHighlightingOptions struct {
-	Scopes [][]string `json:"scopes,omitempty"`
 }
 
 type DeclarationOptions struct {
@@ -435,16 +437,22 @@ var completionItemKindName = map[CompletionItemKind]string{
 }
 
 type CompletionItem struct {
-	Label            string             `json:"label"`
-	Kind             CompletionItemKind `json:"kind,omitempty"`
-	Detail           string             `json:"detail,omitempty"`
-	Documentation    string             `json:"documentation,omitempty"`
-	SortText         string             `json:"sortText,omitempty"`
-	FilterText       string             `json:"filterText,omitempty"`
-	InsertText       string             `json:"insertText,omitempty"`
-	InsertTextFormat InsertTextFormat   `json:"insertTextFormat,omitempty"`
-	TextEdit         *TextEdit          `json:"textEdit,omitempty"`
-	Data             interface{}        `json:"data,omitempty"`
+	Label               string              `json:"label"`
+	Kind                CompletionItemKind  `json:"kind,omitempty"`
+	Tags                []CompletionItemTag `json:"tags,omitempty"`
+	Detail              string              `json:"detail,omitempty"`
+	Documentation       string              `json:"documentation,omitempty"`
+	Preselect           bool                `json:"preselect,omitempty"`
+	SortText            string              `json:"sortText,omitempty"`
+	FilterText          string              `json:"filterText,omitempty"`
+	InsertText          string              `json:"insertText,omitempty"`
+	InsertTextFormat    *InsertTextFormat   `json:"insertTextFormat,omitempty"`
+	InsertTextMode      *InsertTextMode     `json:"insertTextMode,omitempty"`
+	TextEdit            *TextEdit           `json:"textEdit,omitempty"`
+	AdditionalTextEdits []*TextEdit         `json:"additionalTextEdits,omitempty"`
+	CommitCharacters    []string            `json:"commitCharacters,omitempty"`
+	Command             *Command            `json:"command,omitempty"`
+	Data                interface{}         `json:"data,omitempty"`
 }
 
 type CompletionList struct {
@@ -517,44 +525,6 @@ type MarkupContent markupContent
 type markupContent struct {
 	Kind  MarkupKind `json:"kind"`
 	Value string     `json:"value"`
-}
-
-type MarkedString markedString
-
-type markedString struct {
-	Language string `json:"language"`
-	Value    string `json:"value"`
-
-	isRawString bool
-}
-
-func (m *MarkedString) UnmarshalJSON(data []byte) error {
-	if d := strings.TrimSpace(string(data)); len(d) > 0 && d[0] == '"' {
-		// Raw string
-		var s string
-		if err := json.Unmarshal(data, &s); err != nil {
-			return err
-		}
-		m.Value = s
-		m.isRawString = true
-		return nil
-	}
-	// Language string
-	ms := (*markedString)(m)
-	return json.Unmarshal(data, ms)
-}
-
-func (m MarkedString) MarshalJSON() ([]byte, error) {
-	if m.isRawString {
-		return json.Marshal(m.Value)
-	}
-	return json.Marshal((markedString)(m))
-}
-
-// RawMarkedString returns a MarkedString consisting of only a raw
-// string (i.e., "foo" instead of {"value":"foo", "language":"bar"}).
-func RawMarkedString(s string) MarkedString {
-	return MarkedString{Value: s, isRawString: true}
 }
 
 type SignatureHelp struct {
@@ -772,8 +742,8 @@ type MessageType int
 const (
 	MTError   MessageType = 1
 	MTWarning             = 2
-	Info                  = 3
-	Log                   = 4
+	MTInfo                = 3
+	MTLog                 = 4
 )
 
 type ShowMessageParams struct {
@@ -819,6 +789,7 @@ type DidChangeWatchedFilesParams struct {
 
 type PublishDiagnosticsParams struct {
 	URI         DocumentURI  `json:"uri"`
+	Version     uint         `json:"version"`
 	Diagnostics []Diagnostic `json:"diagnostics"`
 }
 
@@ -839,6 +810,7 @@ type CancelParams struct {
 	ID ID `json:"id"`
 }
 
+/*
 type SemanticHighlightingParams struct {
 	TextDocument VersionedTextDocumentIdentifier   `json:"textDocument"`
 	Lines        []SemanticHighlightingInformation `json:"lines"`
@@ -948,3 +920,4 @@ type SemanticHighlightingToken struct {
 	Length    uint16
 	Scope     uint16
 }
+*/
