@@ -663,7 +663,9 @@ type DocumentSymbol struct {
 
 type WorkspaceSymbolParams struct {
 	Query string `json:"query"`
-	Limit int    `json:"limit"`
+	//Limit int    `json:"limit"`
+	//WorkDoneToken
+	//PartialResultToken
 }
 
 type ConfigurationParams struct {
@@ -773,9 +775,9 @@ type DidChangeConfigurationParams struct {
 type FileChangeType int
 
 const (
-	Created FileChangeType = 1
-	Changed                = 2
-	Deleted                = 3
+	FCTCreated FileChangeType = 1
+	FCTChanged                = 2
+	FCTDeleted                = 3
 )
 
 type FileEvent struct {
