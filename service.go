@@ -294,6 +294,141 @@ type SaveOptions struct {
 	IncludeText bool `json:"includeText"`
 }
 
+type WorkspaceFoldersServerCapabilities struct {
+	/**
+	 * The server has support for workspace folders
+	 */
+	Supported bool `json:"supported,omitempty"`
+
+	/**
+	 * Whether the server wants to receive workspace folder
+	 * change notifications.
+	 *
+	 * If a string is provided, the string is treated as an ID
+	 * under which the notification is registered on the client
+	 * side. The ID can be used to unregister for these events
+	 * using the `client/unregisterCapability` request.
+	 */
+	ChangeNotifications string `json:"changeNotifications,omitempty"`
+}
+
+type FileOperationPatternKind string
+
+const (
+	/**
+	 * The pattern matches a file only.
+	 */
+	FOPKFile FileOperationPatternKind = "file"
+
+	/**
+	 * The pattern matches a folder only.
+	 */
+	FOPKFolder FileOperationPatternKind = "folder"
+)
+
+type FileOperationPatternOptions struct {
+
+	/**
+	 * The pattern should be matched ignoring casing.
+	 */
+	IgnoreCase bool `json:"IgnoreCase,omitempty"`
+}
+
+type FileOperationPattern struct {
+	/**
+	 * The glob pattern to match. Glob patterns can have the following syntax:
+	 * - `*` to match one or more characters in a path segment
+	 * - `?` to match on one character in a path segment
+	 * - `**` to match any number of path segments, including none
+	 * - `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}`
+	 *   matches all TypeScript and JavaScript files)
+	 * - `[]` to declare a range of characters to match in a path segment
+	 *   (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+	 * - `[!...]` to negate a range of characters to match in a path segment
+	 *   (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but
+	 *   not `example.0`)
+	 */
+	Glob string `json:"glob"`
+
+	/**
+	 * Whether to match files or folders with this pattern.
+	 *
+	 * Matches both if undefined.
+	 */
+	Matches FileOperationPatternKind `json:"matches"`
+
+	/**
+	 * Additional options used during matching.
+	 */
+	Options FileOperationPatternOptions
+}
+
+type FileOperationFilter struct {
+
+	/**
+	 * A Uri like `file` or `untitled`.
+	 */
+	Scheme string `json:"scheme,omitempty"`
+
+	/**
+	 * The actual file operation pattern.
+	 */
+	Pattern FileOperationPattern `json:"pattern,omitempty"`
+}
+
+type FileOperationRegistrationOptions struct {
+	/**
+	 * The actual filters.
+	 */
+	Filters []FileOperationFilter `json:"filters,omitempty"`
+}
+
+type WorkspaceOptionsFileOperations struct {
+	/**
+	* The server is interested in receiving didCreateFiles
+	* notifications.
+	 */
+	DidCreate *FileOperationRegistrationOptions `json:"didCreate,omitempty"`
+
+	/**
+	* The server is interested in receiving willCreateFiles requests.
+	 */
+	WillCreate *FileOperationRegistrationOptions `json:"willCreate,omitempty"`
+
+	/**
+	* The server is interested in receiving didRenameFiles
+	* notifications.
+	 */
+	DidRename *FileOperationRegistrationOptions `json:"didRename,omitempty"`
+
+	/**
+	* The server is interested in receiving willRenameFiles requests.
+	 */
+	WillRename *FileOperationRegistrationOptions `json:"willRename,omitempty"`
+
+	/**
+	* The server is interested in receiving didDeleteFiles file
+	* notifications.
+	 */
+	DidDelete *FileOperationRegistrationOptions `json:"didDelete,omitempty"`
+
+	/**
+	* The server is interested in receiving willDeleteFiles file
+	* requests.
+	 */
+	WillDelete *FileOperationRegistrationOptions `json:"willDelete,omitempty"`
+}
+
+type WorkspaceOptions struct {
+	WorkspaceFolders *WorkspaceFoldersServerCapabilities `json:"workspaceFolders,omitempty"`
+	/**
+	 * The server is interested in file notifications/requests.
+	 *
+	 * @since 3.16.0
+	 */
+	FileOperations *WorkspaceOptionsFileOperations `json:"fileOperations,omitempty"`
+}
+
 type ServerCapabilities struct {
 	TextDocumentSync                 *TextDocumentSyncOptionsOrKind   `json:"textDocumentSync,omitempty"`
 	CompletionProvider               *CompletionOptions               `json:"completionProvider,omitempty"`
@@ -354,7 +489,72 @@ type CodeLensOptions struct {
 	ResolveProvider bool `json:"resolveProvider,omitempty"`
 }
 
+type WorkDoneProgressOptions struct {
+	WorkDoneProgress bool `json:"workDoneProgress,omitempty"`
+}
+
+type FoldingRangeOptions struct {
+	WorkDoneProgressOptions
+	ResolveProvider bool `json:"resolveProvider,omitempty"`
+}
+
+type SelectionRangeOptions struct {
+	WorkDoneProgressOptions
+}
+
+type LinkedEditingRangeOptions struct {
+	WorkDoneProgressOptions
+}
+
+type CallHierarchyOptions struct {
+	WorkDoneProgressOptions
+}
+
+type SemanticTokenOptionsFull struct {
+	Delta bool `json:"delta,omitempty"`
+}
+
+type SemanticTokensLegend struct {
+	/**
+	 * The token types a server uses.
+	 */
+	TokenTypes []string `json:"tokenTypes,omitempty"`
+
+	/**
+	 * The token modifiers a server uses.
+	 */
+	TokenModifiers []string `json:"tokenModifiers,omitempty"`
+}
+
+type SemanticTokensOptions struct {
+	WorkDoneProgressOptions
+
+	/**
+	 * The legend used by the server
+	 */
+	Legend SemanticTokensLegend `json:"legend,omitempty"`
+
+	/**
+	 * Server supports providing semantic tokens for a specific range
+	 * of a document.
+	 */
+	Range bool `json:"range,omitempty"`
+
+	/**
+	 * Server supports providing semantic tokens for a full document.
+	 */
+	Full *SemanticTokenOptionsFull `json:"full,omitempty"`
+}
+
+type MonikerOptions struct {
+	WorkDoneProgressOptions
+}
+
 type DocumentLinkOptions struct {
+	ResolveProvider bool `json:"resolveProvider,omitempty"`
+}
+
+type DocumentColorOptions struct {
 	ResolveProvider bool `json:"resolveProvider,omitempty"`
 }
 
@@ -440,6 +640,36 @@ var completionItemKindName = map[CompletionItemKind]string{
 	CIKTypeParameter: "typeParameter",
 }
 
+type CompletionItemTag int
+
+const (
+	CITDeprecated CompletionItemTag = 1
+)
+
+type InsertTextMode int
+
+const (
+	/**
+	 * The insertion or replace strings is taken as it is. If the
+	 * value is multi line the lines below the cursor will be
+	 * inserted using the indentation defined in the string value.
+	 * The client will not apply any kind of adjustments to the
+	 * string.
+	 */
+	ITMAsIs InsertTextMode = 1
+
+	/**
+	 * The editor adjusts leading whitespace of new lines so that
+	 * they match the indentation up to the cursor of the line for
+	 * which the item is accepted.
+	 *
+	 * Consider a line like this: <2tabs><cursor><3tabs>foo. Accepting a
+	 * multi line completion item is indented using 2 tabs and all
+	 * following lines inserted will be indented using 2 tabs as well.
+	 */
+	ITMAdjustIndentation = 2
+)
+
 type CompletionItem struct {
 	Label               string              `json:"label"`
 	Kind                CompletionItemKind  `json:"kind,omitempty"`
@@ -475,19 +705,6 @@ type DocumentationFormat string
 
 const (
 	DFPlainText DocumentationFormat = "plaintext"
-)
-
-type CodeActionKind string
-
-const (
-	CAKEmpty                 CodeActionKind = ""
-	CAKQuickFix              CodeActionKind = "quickfix"
-	CAKRefactor              CodeActionKind = "refactor"
-	CAKRefactorExtract       CodeActionKind = "refactor.extract"
-	CAKRefactorInline        CodeActionKind = "refactor.inline"
-	CAKRefactorRewrite       CodeActionKind = "refactor.rewrite"
-	CAKSource                CodeActionKind = "source"
-	CAKSourceOrganizeImports CodeActionKind = "source.organizeImports"
 )
 
 type InsertTextFormat int
