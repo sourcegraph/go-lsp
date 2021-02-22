@@ -354,6 +354,10 @@ type CodeLensOptions struct {
 	ResolveProvider bool `json:"resolveProvider,omitempty"`
 }
 
+type DocumentLinkOptions struct {
+	ResolveProvider bool `json:"resolveProvider,omitempty"`
+}
+
 type SignatureHelpOptions struct {
 	TriggerCharacters []string `json:"triggerCharacters,omitempty"`
 }
@@ -446,7 +450,7 @@ type CompletionItem struct {
 	SortText            string              `json:"sortText,omitempty"`
 	FilterText          string              `json:"filterText,omitempty"`
 	InsertText          string              `json:"insertText,omitempty"`
-	InsertTextFormat    *InsertTextFormat   `json:"insertTextFormat,omitempty"`
+	InsertTextFormat    InsertTextFormat    `json:"insertTextFormat,omitempty"`
 	InsertTextMode      *InsertTextMode     `json:"insertTextMode,omitempty"`
 	TextEdit            *TextEdit           `json:"textEdit,omitempty"`
 	AdditionalTextEdits []*TextEdit         `json:"additionalTextEdits,omitempty"`
@@ -499,6 +503,11 @@ type CompletionContext struct {
 }
 
 type CompletionParams struct {
+	TextDocumentPositionParams
+	Context CompletionContext `json:"context,omitempty"`
+}
+
+type DocumentHighlightParams struct {
 	TextDocumentPositionParams
 	Context CompletionContext `json:"context,omitempty"`
 }
