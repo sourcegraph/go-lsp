@@ -660,6 +660,23 @@ type SymbolInformation struct {
 	ContainerName string     `json:"containerName,omitempty"`
 }
 
+type DocumentSymbol struct {
+	Name           string           `json:"name"`
+	Detail         string           `json:"detail,omitempty"`
+	Kind           SymbolKind       `json:"kind"`
+	Tags           []SymbolTag      `json:"tags,omitempty"`
+	Deprecated     bool             `json:"deprecated,omitempty"`
+	Range          Range            `json:"range"`
+	SelectionRange Range            `json:"selectionRange"`
+	Children       []DocumentSymbol `json:"children,omitempty"`
+}
+
+type SymbolTag int
+
+const (
+	STDeprecated SymbolTag = 1
+)
+
 type WorkspaceSymbolParams struct {
 	Query string `json:"query"`
 	Limit int    `json:"limit"`
